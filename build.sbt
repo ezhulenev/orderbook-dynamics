@@ -23,7 +23,7 @@ resolvers += "Scalafi Bintray Repo" at "http://dl.bintray.com/ezhulenev/releases
 libraryDependencies ++= Seq(
   "org.scalaz"        %% "scalaz-core"     % "7.1.0",
   "org.scalaz.stream" %% "scalaz-stream"   % "0.5a",
-  "com.scalafi"       %% "scala-openbook"  % "0.0.1"
+  "com.scalafi"       %% "scala-openbook"  % "0.0.2"
 )
 
 // Test Dependencies
