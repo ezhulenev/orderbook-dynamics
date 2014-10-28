@@ -1,15 +1,42 @@
+import AssemblyKeys._
+
+
 name := "svm orderbook dynamics"
 
 version := "0.0.1"
 
 organization := "com.scalafi.dynamics"
 
-
-scalaVersion := "2.11.2"
+scalaVersion := "2.10.4"
 
 scalacOptions += "-deprecation"
 
 scalacOptions += "-feature"
+
+net.virtualvoid.sbt.graph.Plugin.graphSettings
+
+// Merge strategy
+
+val applicationMergeStrategy: (String => MergeStrategy) => String => MergeStrategy =
+  old => {
+    case x if x.startsWith("META-INF/ECLIPSEF.RSA") => MergeStrategy.last
+    case x if x.startsWith("META-INF/mailcap")      => MergeStrategy.last
+    case x if x.endsWith  ("plugin.properties")     => MergeStrategy.last
+    case x => old(x)
+  }
+
+// Load Assembly Settings
+
+assemblySettings
+
+
+// Assembly App
+
+mainClass in assembly := Some("com.scalafi.dynamycs.NotYetImplemented")
+
+jarName in assembly := "spark-testing-example-app.jar"
+
+mergeStrategy in assembly <<= (mergeStrategy in assembly)(applicationMergeStrategy)
 
 
 // Resolvers
@@ -18,12 +45,23 @@ resolvers += "Scalaz Bintray Repo" at "http://dl.bintray.com/scalaz/releases"
 
 resolvers += "Scalafi Bintray Repo" at "http://dl.bintray.com/ezhulenev/releases"
 
+
 // Library Dependencies
 
 libraryDependencies ++= Seq(
-  "org.scalaz"        %% "scalaz-core"     % "7.1.0",
-  "org.scalaz.stream" %% "scalaz-stream"   % "0.5a",
-  "com.scalafi"       %% "scala-openbook"  % "0.0.2"
+  "org.slf4j"          % "slf4j-api"       % "1.7.7",
+  "ch.qos.logback"     % "logback-classic" % "1.1.2",
+  "com.scalafi"       %% "scala-openbook"  % "0.0.4",
+  "org.apache.spark"  %% "spark-core"      % "1.1.0" excludeAll(
+    ExclusionRule("commons-beanutils", "commons-beanutils-core"),
+    ExclusionRule("commons-collections", "commons-collections"),
+    ExclusionRule("commons-logging", "commons-logging"),
+    ExclusionRule("org.slf4j", "slf4j-log4j12"),
+    ExclusionRule("org.hamcrest", "hamcrest-core"),
+    ExclusionRule("junit", "junit"),
+    ExclusionRule("org.jboss.netty", "netty"),
+    ExclusionRule("com.esotericsoftware.minlog", "minlog")
+    )
 )
 
 // Test Dependencies
