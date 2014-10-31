@@ -1,9 +1,10 @@
 package com.scalafi.dynamics.attribute
 
 import com.scalafi.openbook.orderbook.OrderBook
+import framian.Cell
 
 sealed trait BasicAttribute[T] {
-  def apply(orderBook: OrderBook): Option[T]
+  def apply(orderBook: OrderBook): Cell[T]
 }
 
 object BasicSet {
@@ -28,19 +29,23 @@ object BasicSet {
 }
 
 class BasicSet private[attribute] (config: BasicSet.Config) {
-  private[attribute] def askPrice(orderBook: OrderBook)(i: Int): Option[Int] = {
-    orderBook.sell.keySet.drop(i - 1).headOption
+  private[attribute] def askPrice(orderBook: OrderBook)(i: Int): Cell[Int] = {
+    Cell.fromOption {
+      orderBook.sell.keySet.drop(i - 1).headOption
+    }
   }
 
   private[attribute] def askVolume(orderBook: OrderBook)(i: Int) = {
     askPrice(orderBook)(i).map(orderBook.sell)
   }
 
-  private[attribute] def bidPrice(orderBook: OrderBook)(i: Int): Option[Int] = {
-    val bidPrices = orderBook.buy.keySet
-    if (bidPrices.size >= i) {
-      bidPrices.drop(bidPrices.size - i).headOption
-    } else None
+  private[attribute] def bidPrice(orderBook: OrderBook)(i: Int): Cell[Int] = {
+    Cell.fromOption {
+      val bidPrices = orderBook.buy.keySet
+      if (bidPrices.size >= i) {
+        bidPrices.drop(bidPrices.size - i).headOption
+      } else None
+    }
   }
 
   private[attribute] def bidVolume(orderBook: OrderBook)(i: Int) = {
@@ -52,8 +57,8 @@ class BasicSet private[attribute] (config: BasicSet.Config) {
     f
   }
 
-  private def attribute[T](f: OrderBook => Option[T]): BasicAttribute[T] = new BasicAttribute[T] {
-    def apply(orderBook: OrderBook): Option[T] = f(orderBook)
+  private def attribute[T](f: OrderBook => Cell[T]): BasicAttribute[T] = new BasicAttribute[T] {
+    def apply(orderBook: OrderBook): Cell[T] = f(orderBook)
   }
 
   def askPrice(i: Int): BasicAttribute[Int] = checkLevel(i) {

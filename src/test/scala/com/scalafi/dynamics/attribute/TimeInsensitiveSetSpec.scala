@@ -2,6 +2,7 @@ package com.scalafi.dynamics.attribute
 
 import com.scalafi.openbook.Side
 import com.scalafi.openbook.orderbook.OrderBook
+import framian.Value
 import org.scalatest.FlatSpec
 
 class TimeInsensitiveSetSpec extends FlatSpec {
@@ -24,28 +25,28 @@ class TimeInsensitiveSetSpec extends FlatSpec {
     val priceSpread1 = timeInsensitiveSet.priceSpread(1)
     val priceSpreads1 = orderBooks.map(priceSpread1(_))
 
-    assert(priceSpreads1.last == Some(1000))
+    assert(priceSpreads1.last == Value(1000))
   }
 
   it should "build valid volume spreads stream" in {
     val volumeSpread1 = timeInsensitiveSet.volumeSpread(1)
     val volumeSpreads1 = orderBooks.map(volumeSpread1(_))
 
-    assert(volumeSpreads1.last == Some(5))
+    assert(volumeSpreads1.last == Value(5))
   }
 
   it should "build valid mid price stream" in {
     val midPrice1 = timeInsensitiveSet.midPrice(1)
     val midPrices1 = orderBooks.map(midPrice1(_))
 
-    assert(midPrices1.last == Some(10500))
+    assert(midPrices1.last == Value(10500))
   }
 
   it should "build valid ask step stream" in {
     val askStep1 = timeInsensitiveSet.askStep(1)
     val askSteps1 = orderBooks.map(askStep1(_))
 
-    assert(askSteps1.last == Some(1000))
+    assert(askSteps1.last == Value(1000))
   }
 
   it should "build valid mean ask price stream" in {
@@ -53,7 +54,7 @@ class TimeInsensitiveSetSpec extends FlatSpec {
     val meanAsks = orderBooks.map(meanAsk(_))
 
     val expectedMean = (order3.priceNumerator.toDouble + order4.priceNumerator.toDouble + order5.priceNumerator.toDouble) / 3
-    assert(meanAsks.last == Some(expectedMean))
+    assert(meanAsks.last == Value(expectedMean))
   }
 
   it should "build valid mean bid price stream" in {
@@ -61,7 +62,7 @@ class TimeInsensitiveSetSpec extends FlatSpec {
     val meanBids = orderBooks.map(meanBid(_))
 
     val expectedMean = (order1.priceNumerator.toDouble + order2.priceNumerator.toDouble) / 2
-    assert(meanBids.last == Some(expectedMean))
+    assert(meanBids.last == Value(expectedMean))
   }
 
   it should "build valid price & volume accumulators" in {
@@ -70,7 +71,7 @@ class TimeInsensitiveSetSpec extends FlatSpec {
 
     val acc = orderBooks.map(ob => (accumulatedPrice(ob), accumulatedVolume(ob)))
 
-    val expectedAcc = (Some(1000), Some(5))
+    val expectedAcc = (Value(1000), Value(5))
     assert(acc.last == expectedAcc)
   }
 }

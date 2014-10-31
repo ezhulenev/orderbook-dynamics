@@ -45,6 +45,9 @@ resolvers += "Scalaz Bintray Repo" at "http://dl.bintray.com/scalaz/releases"
 
 resolvers += "Scalafi Bintray Repo" at "http://dl.bintray.com/ezhulenev/releases"
 
+resolvers += "Pellucid Bintray" at "http://dl.bintray.com/pellucid/maven"
+
+
 
 // Library Dependencies
 
@@ -52,6 +55,7 @@ libraryDependencies ++= Seq(
   "org.slf4j"          % "slf4j-api"       % "1.7.7",
   "ch.qos.logback"     % "logback-classic" % "1.1.2",
   "com.scalafi"       %% "scala-openbook"  % "0.0.4",
+  "com.pellucid"      %% "framian"         % "0.3.1",
   "org.apache.spark"  %% "spark-core"      % "1.1.0" excludeAll(
     ExclusionRule("commons-beanutils", "commons-beanutils-core"),
     ExclusionRule("commons-collections", "commons-collections"),

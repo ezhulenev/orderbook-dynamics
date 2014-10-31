@@ -2,6 +2,7 @@ package com.scalafi.dynamics.attribute
 
 import com.scalafi.openbook.Side
 import com.scalafi.openbook.orderbook.OrderBook
+import framian.Value
 import org.scalatest.FlatSpec
 
 class BasicSetSpec extends FlatSpec {
@@ -22,7 +23,7 @@ class BasicSetSpec extends FlatSpec {
     val bid1Volume = basisSet.bidVolume(1)
 
     val bids1 = orderBooks.map(orderBook => (bid1(orderBook), bid1Volume(orderBook)))
-    assert(bids1.last ==(Some(10000), Some(15)))
+    assert(bids1.last ==(Value(10000), Value(15)))
   }
 
   it should "prevent from creating wrong metric" in {

@@ -1,9 +1,10 @@
 package com.scalafi.dynamics.attribute
 
 import com.scalafi.openbook.orderbook.OrderBook
+import framian.{Value, NA, Cell}
 
 sealed trait TimeInsensitiveAttribute[T] {
-  def apply(orderBook: OrderBook): Option[T]
+  def apply(orderBook: OrderBook): Cell[T]
 }
 
 object TimeInsensitiveSet {
@@ -24,34 +25,31 @@ object TimeInsensitiveSet {
 
 class TimeInsensitiveSet private[attribute](config: TimeInsensitiveSet.Config) {
 
-  import scalaz.std.option._
-  import scalaz.syntax.applicative._
-  
   private val basicSet = BasicSet(config.basicSetConfig)
   
-  private[attribute] type Extractor[T] = OrderBook => Int => Option[T]
+  private[attribute] type Extractor[T] = OrderBook => Int => Cell[T]
 
-  private[attribute] def spread(orderBook: OrderBook)(i: Int, l: Extractor[Int], r: Extractor[Int]): Option[Int] = {
-    ^(l(orderBook)(i), r(orderBook)(i))((lv, rv) => lv - rv)
+  private[attribute] def spread(orderBook: OrderBook)(i: Int, l: Extractor[Int], r: Extractor[Int]): Cell[Int] = {
+    (l(orderBook)(i) zipMap r(orderBook)(i))((lv, rv) => lv - rv)
   }
 
-  private[attribute] def mean(orderBook: OrderBook)(f: Extractor[Int]): Option[Double] = {
+  private[attribute] def mean(orderBook: OrderBook)(f: Extractor[Int]): Cell[Double] = {
     val definedValues =
-      (1 to config.basicSetConfig.orderBookDepth) map (i => f(orderBook)(i)) takeWhile(_.isDefined) map (_.get)
-    
+      (1 to config.basicSetConfig.orderBookDepth) map (i => f(orderBook)(i)) takeWhile(_.isValue) map (_.get)
+
     if (definedValues.nonEmpty) {
       val sum = definedValues.sum.toDouble
       val n = definedValues.size
 
-      Some(sum / n)
-    } else None
+      Value(sum / n)
+    } else NA
   }
 
-  private[attribute] def acc(orderBook: OrderBook)(ask: Extractor[Int], bid: Extractor[Int]): Option[Int] = {
+  private[attribute] def acc(orderBook: OrderBook)(ask: Extractor[Int], bid: Extractor[Int]): Cell[Int] = {
     val spreads =
-      (1 to config.basicSetConfig.orderBookDepth) map(i => ^(ask(orderBook)(i), bid(orderBook)(i))((a, b) => a - b)) takeWhile(_.isDefined) map(_.get)
+      (1 to config.basicSetConfig.orderBookDepth) map(i => (ask(orderBook)(i) zipMap bid(orderBook)(i))((a, b) => a - b)) takeWhile(_.isValue) map(_.get)
 
-    if (spreads.isEmpty) None else Some(spreads.sum)
+    if (spreads.isEmpty) NA else Value(spreads.sum)
   }
 
   private def checkLevel[T](i: Int)(f: =>T): T = {
@@ -59,8 +57,8 @@ class TimeInsensitiveSet private[attribute](config: TimeInsensitiveSet.Config) {
     f
   }
 
-  private def attribute[T](f: OrderBook => Option[T]): TimeInsensitiveAttribute[T] = new TimeInsensitiveAttribute[T] {
-    def apply(orderBook: OrderBook): Option[T] = f(orderBook)
+  private def attribute[T](f: OrderBook => Cell[T]): TimeInsensitiveAttribute[T] = new TimeInsensitiveAttribute[T] {
+    def apply(orderBook: OrderBook): Cell[T] = f(orderBook)
   }
 
   def priceSpread(i: Int): TimeInsensitiveAttribute[Int] = checkLevel(i) {
@@ -75,17 +73,17 @@ class TimeInsensitiveSet private[attribute](config: TimeInsensitiveSet.Config) {
 
   def midPrice(i: Int): TimeInsensitiveAttribute[Int] = checkLevel(i) {
     import basicSet.{askPrice, bidPrice}
-    attribute(ob => ^(askPrice(ob)(i), bidPrice(ob)(i))((ask, bid) => (ask + bid) / 2))
+    attribute(ob => (askPrice(ob)(i) zipMap bidPrice(ob)(i))((ask, bid) => (ask + bid) / 2))
   }
 
   def bidStep(i: Int): TimeInsensitiveAttribute[Int] = checkLevel(i) {
     import basicSet.bidPrice
-    attribute(ob => ^(bidPrice(ob)(i), bidPrice(ob)(i+1))((bid1, bid2) => math.abs(bid1 - bid2)))
+    attribute(ob => (bidPrice(ob)(i) zipMap bidPrice(ob)(i+1))((bid1, bid2) => math.abs(bid1 - bid2)))
   }
 
   def askStep(i: Int): TimeInsensitiveAttribute[Int] = checkLevel(i) {
     import basicSet.askPrice
-    attribute(ob => ^(askPrice(ob)(i), askPrice(ob)(i+1))((ask1, ask2) => math.abs(ask1 - ask2)))
+    attribute(ob => (askPrice(ob)(i) zipMap askPrice(ob)(i+1))((ask1, ask2) => math.abs(ask1 - ask2)))
   }
 
   def meanAsk: TimeInsensitiveAttribute[Double] = {

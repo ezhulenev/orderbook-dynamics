@@ -1,6 +1,7 @@
 package com.scalafi.dynamics.attribute
 
 import com.scalafi.openbook.{OpenBookMsg, Side}
+import framian.Value
 import org.scalatest.FlatSpec
 
 import scala.concurrent.duration._
@@ -33,6 +34,6 @@ class TimeSensitiveSetSpec extends FlatSpec {
 
   it should "build valid ask arrival rate" in {
     val askArrivalRate = timeSensitiveSet.askArrivalRate
-    assert(askArrivalRate(trail) == Some(6.0 / 1000)) // 6 sell orders in 1000 millis
+    assert(askArrivalRate(trail) == Value(6.0 / 1000)) // 6 sell orders in 1000 millis
   }
 }
