@@ -3,6 +3,12 @@ package com.scalafi.dynamics.attribute
 import com.scalafi.openbook.orderbook.OrderBook
 import framian.Cell
 
+object BasicAttribute {
+  def from[T](f: OrderBook => Cell[T]) = new BasicAttribute[T] {
+    def apply(orderBook: OrderBook): Cell[T] = f(orderBook)
+  }
+}
+
 sealed trait BasicAttribute[T] {
   def apply(orderBook: OrderBook): Cell[T]
 }
@@ -75,5 +81,14 @@ class BasicSet private[attribute] (config: BasicSet.Config) {
 
   def bidVolume(i: Int): BasicAttribute[Int] = checkLevel(i) {
     attribute(bidVolume(_)(i))
+  }
+
+  val meanPrice: BasicAttribute[Double] = {
+    val ask1 = askPrice(1)
+    val bid1 = bidPrice(1)
+    BasicAttribute.from(orderBook =>
+      ask1(orderBook).zipMap(bid1(orderBook)) {
+        (ask, bid) => (ask.toDouble + bid.toDouble) / 2
+      })
   }
 }

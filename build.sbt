@@ -29,7 +29,6 @@ val applicationMergeStrategy: (String => MergeStrategy) => String => MergeStrate
 
 assemblySettings
 
-
 // Assembly App
 
 mainClass in assembly := Some("com.scalafi.dynamycs.NotYetImplemented")
@@ -47,26 +46,29 @@ resolvers += "Scalafi Bintray Repo" at "http://dl.bintray.com/ezhulenev/releases
 
 resolvers += "Pellucid Bintray" at "http://dl.bintray.com/pellucid/maven"
 
-
-
 // Library Dependencies
 
-libraryDependencies ++= Seq(
-  "org.slf4j"          % "slf4j-api"       % "1.7.7",
-  "ch.qos.logback"     % "logback-classic" % "1.1.2",
-  "com.scalafi"       %% "scala-openbook"  % "0.0.4",
-  "com.pellucid"      %% "framian"         % "0.3.1",
-  "org.apache.spark"  %% "spark-core"      % "1.1.0" excludeAll(
-    ExclusionRule("commons-beanutils", "commons-beanutils-core"),
-    ExclusionRule("commons-collections", "commons-collections"),
-    ExclusionRule("commons-logging", "commons-logging"),
-    ExclusionRule("org.slf4j", "slf4j-log4j12"),
-    ExclusionRule("org.hamcrest", "hamcrest-core"),
-    ExclusionRule("junit", "junit"),
-    ExclusionRule("org.jboss.netty", "netty"),
-    ExclusionRule("com.esotericsoftware.minlog", "minlog")
-    )
+val SparkExclusionRules = Seq(
+  ExclusionRule("commons-beanutils", "commons-beanutils-core"),
+  ExclusionRule("commons-collections", "commons-collections"),
+  ExclusionRule("commons-logging", "commons-logging"),
+  ExclusionRule("org.slf4j", "slf4j-log4j12"),
+  ExclusionRule("org.hamcrest", "hamcrest-core"),
+  ExclusionRule("junit", "junit"),
+  ExclusionRule("org.jboss.netty", "netty"),
+  ExclusionRule("com.esotericsoftware.minlog", "minlog")
 )
+
+
+libraryDependencies ++= Seq(
+    "org.slf4j"          % "slf4j-api"       % "1.7.7",
+    "ch.qos.logback"     % "logback-classic" % "1.1.2",
+    "com.scalafi"       %% "scala-openbook"  % "0.0.4",
+    "com.pellucid"      %% "framian"         % "0.3.1",
+    "org.apache.spark"  %% "spark-core"      % "1.1.0" excludeAll(SparkExclusionRules:_*),
+    "org.apache.spark"  %% "spark-mllib"     % "1.1.0" excludeAll(SparkExclusionRules:_*)
+  )
+
 
 // Test Dependencies
 
