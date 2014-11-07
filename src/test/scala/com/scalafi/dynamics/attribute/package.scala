@@ -1,10 +1,16 @@
 package com.scalafi.dynamics
 
 import com.scalafi.openbook._
+import com.scalafi.openbook.orderbook.OrderBook
 
 
 package object attribute {
   val Symbol = "AAPL"
+
+  def orderBook(orders: OpenBookMsg*): OrderBook = {
+    val orderBook = OrderBook.empty(Symbol)
+    orders.foldLeft(orderBook)((ob, o) => ob.update(o))
+  }
 
   def orderMsg(sourceTime: Int, sourceTimeMicroSecs: Short, price: Int, volume: Int, side: Side) =
     OpenBookMsg(

@@ -23,7 +23,7 @@ object TimeInsensitiveSet {
   }
 }
 
-class TimeInsensitiveSet private[attribute](config: TimeInsensitiveSet.Config) {
+class TimeInsensitiveSet private[attribute](val config: TimeInsensitiveSet.Config) {
 
   private val basicSet = BasicSet(config.basicSetConfig)
   

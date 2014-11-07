@@ -33,7 +33,7 @@ object TimeSensitiveSet {
   }
 }
 
-class TimeSensitiveSet private[attribute](config: TimeSensitiveSet.Config) {
+class TimeSensitiveSet private[attribute](val config: TimeSensitiveSet.Config) {
 
   def trail(current: Vector[OpenBookMsg], order: OpenBookMsg): Vector[OpenBookMsg] = {
     val cutOffTime = order.sourceTime - config.duration.toMillis

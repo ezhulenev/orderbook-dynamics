@@ -63,7 +63,7 @@ val SparkExclusionRules = Seq(
 libraryDependencies ++= Seq(
     "org.slf4j"          % "slf4j-api"       % "1.7.7",
     "ch.qos.logback"     % "logback-classic" % "1.1.2",
-    "com.scalafi"       %% "scala-openbook"  % "0.0.4",
+    "com.scalafi"       %% "scala-openbook"  % "0.0.5",
     "com.pellucid"      %% "framian"         % "0.3.1",
     "org.apache.spark"  %% "spark-core"      % "1.1.0" excludeAll(SparkExclusionRules:_*),
     "org.apache.spark"  %% "spark-mllib"     % "1.1.0" excludeAll(SparkExclusionRules:_*)

@@ -34,7 +34,7 @@ object BasicSet {
   }
 }
 
-class BasicSet private[attribute] (config: BasicSet.Config) {
+class BasicSet private[attribute] (val config: BasicSet.Config) {
   private[attribute] def askPrice(orderBook: OrderBook)(i: Int): Cell[Int] = {
     Cell.fromOption {
       orderBook.sell.keySet.drop(i - 1).headOption
