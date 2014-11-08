@@ -18,7 +18,7 @@ class BasicSetSpec extends FlatSpec {
 
   val basisSet = BasicSet(BasicSet.Config.default)
 
-  "BasicSet features" should "build valid bid price attribute" in {
+  "BasicSet" should "build valid bid price attribute" in {
     val bid1 = basisSet.bidPrice(1)
     val bid1Volume = basisSet.bidVolume(1)
 

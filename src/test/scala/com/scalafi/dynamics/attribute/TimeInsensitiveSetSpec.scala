@@ -21,7 +21,7 @@ class TimeInsensitiveSetSpec extends FlatSpec {
 
   val timeInsensitiveSet = TimeInsensitiveSet(TimeInsensitiveSet.Config.default)
 
-  "TimeInsensitiveSet features" should "build valid price spreads stream" in {
+  "TimeInsensitiveSet" should "build valid price spreads stream" in {
     val priceSpread1 = timeInsensitiveSet.priceSpread(1)
     val priceSpreads1 = orderBooks.map(priceSpread1(_))
 

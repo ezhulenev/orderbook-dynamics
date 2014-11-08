@@ -27,7 +27,7 @@ class TimeSensitiveSetSpec extends FlatSpec {
     (trail, order) => timeSensitiveSet.trail(trail, order)
   }
 
-  "TimeSensitiveSet features" should "build valid orders trail" in {
+  "TimeSensitiveSet" should "build valid orders trail" in {
     assert(trail.head == order2)
     assert(trail.last == order8)
   }

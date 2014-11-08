@@ -4,7 +4,9 @@ import com.scalafi.dynamics.attribute.LabeledPointsExtractor.AttributeSet
 import com.scalafi.openbook.OpenBookMsg
 import com.scalafi.openbook.orderbook.OrderBook
 import framian.Cell
+import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.mllib.regression.LabeledPoint
+import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
 
@@ -51,68 +53,106 @@ class LabeledPointsExtractor[L: LabelEncode] private[attribute](symbol: String,
                                                                (timeInsensitiveSet: AttributeSet[TimeInsensitiveSet, TimeInsensitiveAttribute[Double]])
                                                                (timeSensitiveSet:   AttributeSet[TimeSensitiveSet,   TimeSensitiveAttribute[Double]]) {
 
-  type OrderBookAttribute = OrderBook => Cell[Double]
+  private val log = LoggerFactory.getLogger(classOf[LabeledPointsExtractor[L]])
 
-  def labeledPoints(orders: Vector[OpenBookMsg]): Vector[LabeledPoint] = {
-    var currentOrderBook: OrderBook = OrderBook.apply(symbol)
-    var labelOrderBook: OrderBook = OrderBook.apply(symbol)
+  type FeatureExtractor = AttributesCursor => Cell[Double]
+  type LabelExtractor = (AttributesCursor, LabelCursor) => Option[Int]
+  
+  private val featureExtractors: Vector[(Int, FeatureExtractor)] =
+    (basicSet.attributes.
+      map(attr => attr(basicSet.set)).
+      map(attr => (cursor: AttributesCursor) => attr(cursor.orderBook)) ++ 
+    timeInsensitiveSet.attributes.
+        map(attr => attr(timeInsensitiveSet.set)).
+        map(attr => (cursor: AttributesCursor) => attr(cursor.orderBook)) ++
+    timeSensitiveSet.attributes.
+        map(attr => attr(timeSensitiveSet.set)).
+        map(attr => (cursor: AttributesCursor) => attr(cursor.trail))
+    ).zipWithIndex.map(_.swap)
 
-
-    Vector.empty
+  private val labelExtractor: LabelExtractor = {
+    case (attr, lbl) => label.encode.apply(attr.orderBook, lbl.orderBook)
   }
 
-  class RunWithOrders(openBookMessages: Vector[OpenBookMsg]) { self =>
+  log.info(s"Build labeled points extractor for symbol: $symbol. " +
+    s"Number of features: ${featureExtractors.size}")
 
-    /*
-     Two iterators, label-iterator is 'labelDuration' ahead current-iterator
+  def labeledPoints(orders: Vector[OpenBookMsg]): Vector[LabeledPoint] = {
+    log.info(s"Extract labeled points from orders log. Log size: ${orders.size}")
 
-     Time:        | > > >  | > > > > > > > > > > > > > > | > > > >  | > > > > > > > > >
-                  | 0sec   |    +1sec     +2sec     +3sec  |    +4sec  |    +5sec     +6sec
-     Orders:      | order1 | -> order2 -> order3 -> order4 | -> order5 | -> order6 -> order7
-     Order Books: | book1  | -> book2  -> book3  -> book4  | -> book5  | -> book6  -> book7
-                   -------                                  ----------
-     State             ^ - current state                         ^ -> label state
-    */
-
-
-    case class CurrentState(order: OpenBookMsg, orderBook: OrderBook, trail: Vector[OpenBookMsg])
-
-    case class LabelState(order: OpenBookMsg, orderBook: OrderBook)
-
-    def currentStates: Iterator[CurrentState] = {
-      (orders zip orderBooks zip trails) map {
-        case ((order, orderBook), trail) => CurrentState(order, orderBook, trail)
+    val traversal = new OrdersCursorTraversal(orders)
+    val labeledPoints: Iterator[LabeledPoint] =
+      traversal.cursor map { case (attributesCursor, labelCursor) =>
+        val values = featureExtractors.map {
+          case (idx, extractor) => (idx, extractor(attributesCursor))
+        } collect {
+          case (idx, cell) if cell.isValue => (idx, cell.get)
+        }
+        val labelCode = labelExtractor(attributesCursor, labelCursor)
+        (labelCode, values)
+      } collect {
+        case (Some(labelCode), values) if values.nonEmpty =>
+          val featureVector = Vectors.sparse(featureExtractors.size, values)
+          LabeledPoint(labelCode.toDouble, featureVector)
       }
-    }
 
-    def labelStates: Iterator[LabelState] = {
-      (orders zip orderBooks) map {
-        case (order, orderBook) => LabelState(order, orderBook)
-      }
-    }
+    labeledPoints.toVector
+  }
 
-    def joinedState: Iterator[(CurrentState, LabelState)] = {
-      val dropDuration = config.labelDuration.toMillis
+  /*
+    Two cursors: attributes-cursor + label-cursor 'labelDuration' ahead of it
+    Feature vector calculated from 'attributes-cursor'
+    Label is based on 'label-cursor'
+   
+    Time:        | > > >  | > > > > > > > > > > > > > > > | > > > > > | > > > > > > > > > > >
+                 | 0sec   |    +1sec     +2sec     +3sec  |    +4sec  |    +5sec     +6sec
+    Orders:      | order1 | -> order2 -> order3 -> order4 | -> order5 | -> order6 -> order7
+    Order Books: | book1  | -> book2  -> book3  -> book4  | -> book5  | -> book6  -> book7
+                  -------                                  ----------
+    Cursors:          ^ - attributes cursor                     ^ -> label cursor
+
+                      >-----------------------------------------<
+                               label duration = 4 seconds
+  */
+
+
+  case class AttributesCursor(order: OpenBookMsg, orderBook: OrderBook, trail: Vector[OpenBookMsg])
+
+  case class LabelCursor(order: OpenBookMsg, orderBook: OrderBook)
+
+  class OrdersCursorTraversal(openBookMessages: Vector[OpenBookMsg]) { self =>
+    
+    def cursor: Iterator[(AttributesCursor, LabelCursor)] = {
+      val labelLookForwardMillis = config.labelDuration.toMillis
 
       // Create local copies of iterators
-      val current = self.currentStates
-      var label = self.labelStates
+      val attributes = self.attributes
+      var labels = self.labels
 
-      current.map { currentState =>
-        label = label.dropWhile(_.order.sourceTime - currentState.order.sourceTime < dropDuration)
-        if (label.hasNext) (currentState, Some(label.next())) else (currentState, None)
-      } collect {
-        case (currentState, Some(labelState)) => (currentState, labelState)
-      }
+      attributes.map { attribute =>
+        labels = labels.dropWhile(_.order.sourceTime - attribute.order.sourceTime < labelLookForwardMillis)
+        if (labels.hasNext) (attribute, Some(labels.next())) else (attribute, None)
+      } collect { case (attr, Some(lbl)) => (attr, lbl) }
     }
+
+    def attributes: Iterator[AttributesCursor] =
+      (orders zip orderBooks zip trails) map {
+        case ((order, orderBook), trail) => AttributesCursor(order, orderBook, trail)
+      }
+
+    def labels: Iterator[LabelCursor] =
+      (orders zip orderBooks) map {
+        case (order, orderBook) => LabelCursor(order, orderBook)
+      }
 
     private def orders: Iterator[OpenBookMsg] =
       openBookMessages.iterator
 
     private def orderBooks: Iterator[OrderBook] =
-      openBookMessages.iterator.scanLeft(OrderBook.empty(symbol))((ob, o) => ob.update(o)).drop(1)
+      orders.scanLeft(OrderBook.empty(symbol))((ob, o) => ob.update(o)).drop(1)
 
     def trails: Iterator[Vector[OpenBookMsg]] =
-      openBookMessages.iterator.scanLeft(Vector.empty[OpenBookMsg])((t, o) => timeSensitiveSet.set.trail(t, o)).drop(1)
+      orders.scanLeft(Vector.empty[OpenBookMsg])((t, o) => timeSensitiveSet.set.trail(t, o)).drop(1)
   }
+
 }

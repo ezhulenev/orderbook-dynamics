@@ -9,7 +9,7 @@ trait Label[L] { label =>
 
   def apply(current: OrderBook, future: OrderBook): Option[L]
 
-  def encode(implicit labelCode: LabelEncode[L]) = new Label[Int] {
+  def encode(implicit labelCode: LabelEncode[L]): Label[Int] = new Label[Int] {
     val values: Vector[Int] = label.values.map(labelCode.code)
     def apply(current: OrderBook, future: OrderBook): Option[Int] =
       label.apply(current, future).map(labelCode.code)
