@@ -16,8 +16,8 @@ class LabeledPointsExtractorSpec extends FlatSpec {
   val order8 = orderMsg(2220, 0, 14000, 50, Side.Sell)   // mean: 13500
 
   val extractor = {
-    import LabeledPointsExtractorBuilder._
-    (LabeledPointsExtractorBuilder.newBuilder()
+    import LabeledPointsExtractor._
+    (LabeledPointsExtractor.newBuilder()
       += basic(_.meanPrice)
     ).result("AAPL", MeanPriceMovementLabel)
   }

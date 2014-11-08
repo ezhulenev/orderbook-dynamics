@@ -1,6 +1,6 @@
 package com.scalafi.dynamics.attribute
 
-import com.scalafi.dynamics.attribute.LabeledPointsExtractor.Config
+import com.scalafi.dynamics.attribute.LabeledPointsExtractor.AttributeSet
 import com.scalafi.openbook.OpenBookMsg
 import com.scalafi.openbook.orderbook.OrderBook
 import framian.Cell
@@ -10,15 +10,25 @@ import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
 
-private[this] case class AttributeSet[S, A](set: S, attributes: Vector[S => A])
+object LabeledPointsExtractor {
 
-object LabeledPointsExtractorBuilder {
+  trait Config {
+    def labelDuration: Duration
+  }
+
+  object Config {
+    val default = new Config {
+      val labelDuration: Duration = 1.second
+    }
+  }
 
   def newBuilder(basicConfig: BasicSet.Config = BasicSet.Config.default,
                  timeInsensitiveConfig: TimeInsensitiveSet.Config = TimeInsensitiveSet.Config.default,
                  timeSensitiveConfig: TimeSensitiveSet.Config = TimeSensitiveSet.Config.default
-                 ): LabeledPointsExtractorBuilder =
+                ): LabeledPointsExtractorBuilder =
     new GenericLabeledPointsExtractorBuilder(basicConfig, timeInsensitiveConfig, timeSensitiveConfig)
+
+  case class AttributeSet[S, A](set: S, attributes: Vector[S => A])
 
   case class ReadBasicAttribute(f: BasicSet => BasicAttribute[Double])
   case class ReadTimeInsensitiveAttribute(f: TimeInsensitiveSet => TimeInsensitiveAttribute[Double])
@@ -36,11 +46,29 @@ object LabeledPointsExtractorBuilder {
     ReadTimeSensitiveAttribute((set: TimeSensitiveSet) => f(set).map(implicitly[Numeric[T]].toDouble))
   }
 
-  private[LabeledPointsExtractorBuilder] class GenericLabeledPointsExtractorBuilder
-                                               (basic: BasicSet.Config,
-                                                timeInsensitive: TimeInsensitiveSet.Config,
-                                                timeSensitive: TimeSensitiveSet.Config
-                                               ) extends LabeledPointsExtractorBuilder {
+  trait LabeledPointsExtractorBuilder {
+
+    def add(attribute: ReadBasicAttribute): this.type
+
+    def add(attribute: ReadTimeInsensitiveAttribute): this.type
+
+    def add(attribute: ReadTimeSensitiveAttribute): this.type
+
+    def +=(attribute: ReadBasicAttribute): this.type = add(attribute)
+
+    def +=(attribute: ReadTimeInsensitiveAttribute): this.type = add(attribute)
+
+    def +=(attribute: ReadTimeSensitiveAttribute): this.type = add(attribute)
+
+    def result[L: LabelEncode](symbol: String, label: Label[L],
+                               config: Config = Config.default): LabeledPointsExtractor[L]
+  }
+
+  private[LabeledPointsExtractor] class GenericLabeledPointsExtractorBuilder
+                                  (basic: BasicSet.Config,
+                                   timeInsensitive: TimeInsensitiveSet.Config,
+                                   timeSensitive: TimeSensitiveSet.Config
+                                  ) extends LabeledPointsExtractorBuilder {
 
     import scala.collection.mutable
 
@@ -66,41 +94,6 @@ object LabeledPointsExtractorBuilder {
       val timeInsensitiveSet = AttributeSet(TimeInsensitiveSet(timeInsensitive), timeInsensitiveAttributes.toVector)
       val timeSensitiveSet = AttributeSet(TimeSensitiveSet(timeSensitive), timeSensitiveAttributes.toVector)
       new LabeledPointsExtractor[L](symbol, label, config)(basicSet)(timeInsensitiveSet)(timeSensitiveSet)
-    }
-  }
-}
-
-trait LabeledPointsExtractorBuilder {
-
-  import com.scalafi.dynamics.attribute.LabeledPointsExtractor.Config
-  import com.scalafi.dynamics.attribute.LabeledPointsExtractorBuilder._
-
-  def add(attribute: ReadBasicAttribute): this.type
-
-  def add(attribute: ReadTimeInsensitiveAttribute): this.type
-
-  def add(attribute: ReadTimeSensitiveAttribute): this.type
-
-  def +=(attribute: ReadBasicAttribute): this.type = add(attribute)
-
-  def +=(attribute: ReadTimeInsensitiveAttribute): this.type = add(attribute)
-
-  def +=(attribute: ReadTimeSensitiveAttribute): this.type = add(attribute)
-
-  def result[L: LabelEncode](symbol: String, label: Label[L],
-                             config: Config = Config.default): LabeledPointsExtractor[L]
-}
-
-
-object LabeledPointsExtractor {
-
-  trait Config {
-    def labelDuration: Duration
-  }
-
-  object Config {
-    val default = new Config {
-      val labelDuration: Duration = 1.second
     }
   }
 
