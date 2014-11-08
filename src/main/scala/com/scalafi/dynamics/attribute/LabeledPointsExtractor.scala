@@ -15,6 +15,8 @@ object LabeledPointsExtractorBuilder {
 }
 
 trait LabeledPointsExtractorBuilder {
+  import com.scalafi.dynamics.attribute.LabeledPointsExtractor.Config
+
   def add[T: Numeric](attribute: BasicAttribute[T]): this.type
 
   def add[T: Numeric](attribute: TimeInsensitiveAttribute[T]): this.type
@@ -27,7 +29,8 @@ trait LabeledPointsExtractorBuilder {
 
   def +=[T: Numeric](attribute: TimeSensitiveAttribute[T]): this.type = add(attribute)
 
-  def result[L: LabelEncode](symbol: String, label: Label[L], config: LabeledPointsExtractor.Config = LabeledPointsExtractor.Config.default): LabeledPointsExtractor[L]
+  def result[L: LabelEncode](symbol: String, label: Label[L],
+                             config: Config = Config.default): LabeledPointsExtractor[L]
 }
 
 object LabeledPointsExtractor {
@@ -46,12 +49,14 @@ object LabeledPointsExtractor {
 
 }
 
-class LabeledPointsExtractor[L: LabelEncode] private[attribute](symbol: String,
-                                                                label: Label[L],
-                                                                config: LabeledPointsExtractor.Config = LabeledPointsExtractor.Config.default)
-                                                               (basicSet:           AttributeSet[BasicSet,           BasicAttribute[Double]])
-                                                               (timeInsensitiveSet: AttributeSet[TimeInsensitiveSet, TimeInsensitiveAttribute[Double]])
-                                                               (timeSensitiveSet:   AttributeSet[TimeSensitiveSet,   TimeSensitiveAttribute[Double]]) {
+class LabeledPointsExtractor[L: LabelEncode] private[attribute]
+      (symbol: String,
+       label: Label[L],
+       config: LabeledPointsExtractor.Config = LabeledPointsExtractor.Config.default
+      )
+      (basicSet:           AttributeSet[BasicSet,           BasicAttribute[Double]])
+      (timeInsensitiveSet: AttributeSet[TimeInsensitiveSet, TimeInsensitiveAttribute[Double]])
+      (timeSensitiveSet:   AttributeSet[TimeSensitiveSet,   TimeSensitiveAttribute[Double]]) {
 
   private val log = LoggerFactory.getLogger(classOf[LabeledPointsExtractor[L]])
 
