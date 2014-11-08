@@ -9,8 +9,12 @@ object BasicAttribute {
   }
 }
 
-sealed trait BasicAttribute[T] {
+sealed trait BasicAttribute[T] { self =>
   def apply(orderBook: OrderBook): Cell[T]
+
+  def map[T2](f: T => T2): BasicAttribute[T2] = new BasicAttribute[T2] {
+    def apply(orderBook: OrderBook): Cell[T2] = self(orderBook).map(f)
+  }
 }
 
 object BasicSet {

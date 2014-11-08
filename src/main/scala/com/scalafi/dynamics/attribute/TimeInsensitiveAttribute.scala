@@ -3,8 +3,13 @@ package com.scalafi.dynamics.attribute
 import com.scalafi.openbook.orderbook.OrderBook
 import framian.{Value, NA, Cell}
 
-sealed trait TimeInsensitiveAttribute[T] {
+sealed trait TimeInsensitiveAttribute[T] { self =>
   def apply(orderBook: OrderBook): Cell[T]
+
+  def map[T2](f: T => T2): TimeInsensitiveAttribute[T2] = new TimeInsensitiveAttribute[T2] {
+    def apply(orderBook: OrderBook): Cell[T2] = self(orderBook).map(f)
+  }
+
 }
 
 object TimeInsensitiveSet {

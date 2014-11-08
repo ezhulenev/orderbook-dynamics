@@ -6,8 +6,13 @@ import framian.{Value, NA, Cell}
 
 import scala.concurrent.duration.FiniteDuration
 
-trait TimeSensitiveAttribute[T] {
+trait TimeSensitiveAttribute[T] { self =>
   def apply(ordersTrail: Vector[OpenBookMsg]): Cell[T]
+
+  def map[T2](f: T => T2): TimeSensitiveAttribute[T2] = new TimeSensitiveAttribute[T2] {
+    def apply(ordersTrail: Vector[OpenBookMsg]): Cell[T2] = self(ordersTrail).map(f)
+  }
+
 }
 
 object TimeSensitiveSet {

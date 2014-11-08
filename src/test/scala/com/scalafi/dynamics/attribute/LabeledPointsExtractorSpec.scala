@@ -1,9 +1,8 @@
 package com.scalafi.dynamics.attribute
 
-import com.scalafi.dynamics.attribute.LabeledPointsExtractor.AttributeSet
 import com.scalafi.openbook.Side
 import org.scalatest.FlatSpec
-import scala.concurrent.duration._
+
 
 class LabeledPointsExtractorSpec extends FlatSpec {
 
@@ -16,23 +15,12 @@ class LabeledPointsExtractorSpec extends FlatSpec {
   val order7 = orderMsg(1220, 0, 13000, 50, Side.Buy)    // mean: 14500
   val order8 = orderMsg(2220, 0, 14000, 50, Side.Sell)   // mean: 13500
 
-  val basic = {
-    val basicSet = BasicSet(BasicSet.Config.default)
-    AttributeSet[BasicSet, BasicAttribute[Double]](basicSet, Vector(_.meanPrice))
+  val extractor = {
+    import LabeledPointsExtractorBuilder._
+    (LabeledPointsExtractorBuilder.newBuilder()
+      += basic(_.meanPrice)
+    ).result("AAPL", MeanPriceMovementLabel)
   }
-
-  val timeInsensitive = {
-    val timeInsensitiveSet = TimeInsensitiveSet(TimeInsensitiveSet.Config.default)
-    AttributeSet(timeInsensitiveSet, Vector.empty[TimeInsensitiveSet => TimeInsensitiveAttribute[Double]])
-  }
-
-  val timeSensitive = {
-    val timeSensitiveSet = TimeSensitiveSet(TimeSensitiveSet.Config(1.second))
-    AttributeSet(timeSensitiveSet, Vector.empty[TimeSensitiveSet => TimeSensitiveAttribute[Double]])
-  }
-
-  val extractor = new LabeledPointsExtractor(Symbol, MeanPriceMovementLabel)(basic)(timeInsensitive)(timeSensitive)
-
 
   "LabeledPointsExtractor" should "extract valid cursors from orders log" in {
     val orders = Vector(order1, order2, order3, order4)

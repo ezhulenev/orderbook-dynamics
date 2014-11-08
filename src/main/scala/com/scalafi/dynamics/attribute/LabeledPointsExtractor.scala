@@ -1,6 +1,6 @@
 package com.scalafi.dynamics.attribute
 
-import com.scalafi.dynamics.attribute.LabeledPointsExtractor.AttributeSet
+import com.scalafi.dynamics.attribute.LabeledPointsExtractor.Config
 import com.scalafi.openbook.OpenBookMsg
 import com.scalafi.openbook.orderbook.OrderBook
 import framian.Cell
@@ -10,32 +10,89 @@ import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
 
+private[this] case class AttributeSet[S, A](set: S, attributes: Vector[S => A])
+
 object LabeledPointsExtractorBuilder {
-  def newBuilder: LabeledPointsExtractorBuilder = ???
+
+  def newBuilder(basicConfig: BasicSet.Config = BasicSet.Config.default,
+                 timeInsensitiveConfig: TimeInsensitiveSet.Config = TimeInsensitiveSet.Config.default,
+                 timeSensitiveConfig: TimeSensitiveSet.Config = TimeSensitiveSet.Config.default
+                 ): LabeledPointsExtractorBuilder =
+    new GenericLabeledPointsExtractorBuilder(basicConfig, timeInsensitiveConfig, timeSensitiveConfig)
+
+  case class ReadBasicAttribute(f: BasicSet => BasicAttribute[Double])
+  case class ReadTimeInsensitiveAttribute(f: TimeInsensitiveSet => TimeInsensitiveAttribute[Double])
+  case class ReadTimeSensitiveAttribute(f: TimeSensitiveSet => TimeSensitiveAttribute[Double])
+
+  def basic[T: Numeric](f: BasicSet => BasicAttribute[T]): ReadBasicAttribute = {
+    ReadBasicAttribute((set: BasicSet) => f(set).map(implicitly[Numeric[T]].toDouble))
+  }
+
+  def timeInsensitive[T: Numeric](f: TimeInsensitiveSet => TimeInsensitiveAttribute[T]): ReadTimeInsensitiveAttribute = {
+    ReadTimeInsensitiveAttribute((set: TimeInsensitiveSet) => f(set).map(implicitly[Numeric[T]].toDouble))
+  }
+
+  def timeSensitive[T: Numeric](f: TimeSensitiveSet => TimeSensitiveAttribute[T]): ReadTimeSensitiveAttribute = {
+    ReadTimeSensitiveAttribute((set: TimeSensitiveSet) => f(set).map(implicitly[Numeric[T]].toDouble))
+  }
+
+  private[LabeledPointsExtractorBuilder] class GenericLabeledPointsExtractorBuilder
+                                               (basic: BasicSet.Config,
+                                                timeInsensitive: TimeInsensitiveSet.Config,
+                                                timeSensitive: TimeSensitiveSet.Config
+                                               ) extends LabeledPointsExtractorBuilder {
+
+    import scala.collection.mutable
+
+    private val basicAttributes =
+      mutable.ListBuffer.empty[BasicSet => BasicAttribute[Double]]
+
+    private val timeInsensitiveAttributes =
+      mutable.ListBuffer.empty[TimeInsensitiveSet => TimeInsensitiveAttribute[Double]]
+
+    private val timeSensitiveAttributes =
+      mutable.ListBuffer.empty[TimeSensitiveSet => TimeSensitiveAttribute[Double]]
+
+    def add(attribute: ReadBasicAttribute) = { basicAttributes += attribute.f; this }
+
+    def add(attribute: ReadTimeInsensitiveAttribute) = { timeInsensitiveAttributes += attribute.f; this }
+
+    def add(attribute: ReadTimeSensitiveAttribute) = { timeSensitiveAttributes += attribute.f; this }
+
+    def result[L: LabelEncode](symbol: String, label: Label[L],
+                               config: Config = Config.default): LabeledPointsExtractor[L] = {
+
+      val basicSet = AttributeSet(BasicSet(basic), basicAttributes.toVector)
+      val timeInsensitiveSet = AttributeSet(TimeInsensitiveSet(timeInsensitive), timeInsensitiveAttributes.toVector)
+      val timeSensitiveSet = AttributeSet(TimeSensitiveSet(timeSensitive), timeSensitiveAttributes.toVector)
+      new LabeledPointsExtractor[L](symbol, label, config)(basicSet)(timeInsensitiveSet)(timeSensitiveSet)
+    }
+  }
 }
 
 trait LabeledPointsExtractorBuilder {
+
   import com.scalafi.dynamics.attribute.LabeledPointsExtractor.Config
+  import com.scalafi.dynamics.attribute.LabeledPointsExtractorBuilder._
 
-  def add[T: Numeric](attribute: BasicAttribute[T]): this.type
+  def add(attribute: ReadBasicAttribute): this.type
 
-  def add[T: Numeric](attribute: TimeInsensitiveAttribute[T]): this.type
+  def add(attribute: ReadTimeInsensitiveAttribute): this.type
 
-  def add[T: Numeric](attribute: TimeSensitiveAttribute[T]): this.type
+  def add(attribute: ReadTimeSensitiveAttribute): this.type
 
-  def +=[T: Numeric](attribute: BasicAttribute[T]): this.type = add(attribute)
+  def +=(attribute: ReadBasicAttribute): this.type = add(attribute)
 
-  def +=[T: Numeric](attribute: TimeInsensitiveAttribute[T]): this.type = add(attribute)
+  def +=(attribute: ReadTimeInsensitiveAttribute): this.type = add(attribute)
 
-  def +=[T: Numeric](attribute: TimeSensitiveAttribute[T]): this.type = add(attribute)
+  def +=(attribute: ReadTimeSensitiveAttribute): this.type = add(attribute)
 
   def result[L: LabelEncode](symbol: String, label: Label[L],
                              config: Config = Config.default): LabeledPointsExtractor[L]
 }
 
-object LabeledPointsExtractor {
 
-  case class AttributeSet[S, A](set: S, attributes: Vector[S => A])
+object LabeledPointsExtractor {
 
   trait Config {
     def labelDuration: Duration
