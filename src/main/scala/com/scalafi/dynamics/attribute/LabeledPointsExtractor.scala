@@ -60,14 +60,14 @@ class LabeledPointsExtractor[L: LabelEncode] private[attribute](symbol: String,
   
   private val featureExtractors: Vector[(Int, FeatureExtractor)] =
     (basicSet.attributes.
-      map(attr => attr(basicSet.set)).
-      map(attr => (cursor: AttributesCursor) => attr(cursor.orderBook)) ++ 
-    timeInsensitiveSet.attributes.
-        map(attr => attr(timeInsensitiveSet.set)).
-        map(attr => (cursor: AttributesCursor) => attr(cursor.orderBook)) ++
-    timeSensitiveSet.attributes.
-        map(attr => attr(timeSensitiveSet.set)).
-        map(attr => (cursor: AttributesCursor) => attr(cursor.trail))
+       map(attr => attr(basicSet.set)).
+       map(attr => (cursor: AttributesCursor) => attr(cursor.orderBook)) ++
+     timeInsensitiveSet.attributes.
+       map(attr => attr(timeInsensitiveSet.set)).
+       map(attr => (cursor: AttributesCursor) => attr(cursor.orderBook)) ++
+     timeSensitiveSet.attributes.
+       map(attr => attr(timeSensitiveSet.set)).
+       map(attr => (cursor: AttributesCursor) => attr(cursor.trail))
     ).zipWithIndex.map(_.swap)
 
   private val labelExtractor: LabelExtractor = {
