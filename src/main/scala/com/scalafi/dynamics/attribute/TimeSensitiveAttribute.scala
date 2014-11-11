@@ -6,7 +6,13 @@ import framian.{Value, NA, Cell}
 
 import scala.concurrent.duration.FiniteDuration
 
-trait TimeSensitiveAttribute[T] { self =>
+object TimeSensitiveAttribute {
+  def from[T](f: Vector[OpenBookMsg] => Cell[T]) = new TimeSensitiveAttribute[T] {
+    def apply(orderLog: Vector[OpenBookMsg]): Cell[T] = f(orderLog)
+  }
+}
+
+trait TimeSensitiveAttribute[T] extends Serializable { self =>
   def apply(ordersTrail: Vector[OpenBookMsg]): Cell[T]
 
   def map[T2](f: T => T2): TimeSensitiveAttribute[T2] = new TimeSensitiveAttribute[T2] {
@@ -20,7 +26,7 @@ object TimeSensitiveSet {
   def apply(config: TimeSensitiveSet.Config): TimeSensitiveSet =
     new TimeSensitiveSet(config)
 
-  trait Config {
+  trait Config extends Serializable {
     def duration: FiniteDuration
     def basicSetConfig: BasicSet.Config
   }
@@ -38,7 +44,7 @@ object TimeSensitiveSet {
   }
 }
 
-class TimeSensitiveSet private[attribute](val config: TimeSensitiveSet.Config) {
+class TimeSensitiveSet private[attribute](val config: TimeSensitiveSet.Config) extends Serializable {
 
   def trail(current: Vector[OpenBookMsg], order: OpenBookMsg): Vector[OpenBookMsg] = {
     val cutOffTime = order.sourceTime - config.duration.toMillis

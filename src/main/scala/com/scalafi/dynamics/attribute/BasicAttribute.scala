@@ -9,7 +9,7 @@ object BasicAttribute {
   }
 }
 
-sealed trait BasicAttribute[T] { self =>
+sealed trait BasicAttribute[T] extends Serializable { self =>
   def apply(orderBook: OrderBook): Cell[T]
 
   def map[T2](f: T => T2): BasicAttribute[T2] = new BasicAttribute[T2] {
@@ -22,7 +22,7 @@ object BasicSet {
   def apply(config: BasicSet.Config): BasicSet =
     new BasicSet(config)
 
-  trait Config {
+  trait Config extends Serializable {
     def orderBookDepth: Int
 
     def checkLevel(i: Int) = {
@@ -38,7 +38,7 @@ object BasicSet {
   }
 }
 
-class BasicSet private[attribute] (val config: BasicSet.Config) {
+class BasicSet private[attribute] (val config: BasicSet.Config) extends Serializable {
   private[attribute] def askPrice(orderBook: OrderBook)(i: Int): Cell[Int] = {
     Cell.fromOption {
       orderBook.sell.keySet.drop(i - 1).headOption

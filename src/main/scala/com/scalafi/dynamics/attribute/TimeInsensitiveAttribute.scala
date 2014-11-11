@@ -3,7 +3,13 @@ package com.scalafi.dynamics.attribute
 import com.scalafi.openbook.orderbook.OrderBook
 import framian.{Value, NA, Cell}
 
-sealed trait TimeInsensitiveAttribute[T] { self =>
+object TimeInsensitiveAttribute {
+  def from[T](f: OrderBook => Cell[T]) = new TimeInsensitiveAttribute[T] {
+    def apply(orderBook: OrderBook): Cell[T] = f(orderBook)
+  }
+}
+
+sealed trait TimeInsensitiveAttribute[T] extends Serializable { self =>
   def apply(orderBook: OrderBook): Cell[T]
 
   def map[T2](f: T => T2): TimeInsensitiveAttribute[T2] = new TimeInsensitiveAttribute[T2] {
@@ -17,7 +23,7 @@ object TimeInsensitiveSet {
   def apply(config: TimeInsensitiveSet.Config): TimeInsensitiveSet =
     new TimeInsensitiveSet(config)
 
-  trait Config {
+  trait Config extends Serializable {
     def basicSetConfig: BasicSet.Config
   }
 
@@ -28,7 +34,7 @@ object TimeInsensitiveSet {
   }
 }
 
-class TimeInsensitiveSet private[attribute](val config: TimeInsensitiveSet.Config) {
+class TimeInsensitiveSet private[attribute](val config: TimeInsensitiveSet.Config) extends Serializable {
 
   private val basicSet = BasicSet(config.basicSetConfig)
   

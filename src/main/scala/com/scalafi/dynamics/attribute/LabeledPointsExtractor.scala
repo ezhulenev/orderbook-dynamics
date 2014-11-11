@@ -12,14 +12,17 @@ import scala.concurrent.duration._
 
 object LabeledPointsExtractor {
 
-  trait Config {
+  trait Config extends Serializable {
     def labelDuration: Duration
   }
 
   object Config {
-    val default = new Config {
-      val labelDuration: Duration = 1.second
+
+    def apply(ld: Duration) = new Config {
+      val labelDuration: Duration = ld
     }
+
+    val default = apply(1.second)
   }
 
   def newBuilder(basicConfig: BasicSet.Config = BasicSet.Config.default,
@@ -106,7 +109,7 @@ class LabeledPointsExtractor[L: LabelEncode] private[attribute]
       )
       (basicSet:           AttributeSet[BasicSet,           BasicAttribute[Double]])
       (timeInsensitiveSet: AttributeSet[TimeInsensitiveSet, TimeInsensitiveAttribute[Double]])
-      (timeSensitiveSet:   AttributeSet[TimeSensitiveSet,   TimeSensitiveAttribute[Double]]) {
+      (timeSensitiveSet:   AttributeSet[TimeSensitiveSet,   TimeSensitiveAttribute[Double]]) extends Serializable {
 
   private val log = LoggerFactory.getLogger(classOf[LabeledPointsExtractor[L]])
 
@@ -133,7 +136,7 @@ class LabeledPointsExtractor[L: LabelEncode] private[attribute]
     s"Number of features: ${featureExtractors.size}")
 
   def labeledPoints(orders: Vector[OpenBookMsg]): Vector[LabeledPoint] = {
-    log.info(s"Extract labeled points from orders log. Log size: ${orders.size}")
+    log.debug(s"Extract labeled points from orders log. Log size: ${orders.size}")
 
     val traversal = new OrdersCursorTraversal(orders)
     val labeledPoints: Iterator[LabeledPoint] =

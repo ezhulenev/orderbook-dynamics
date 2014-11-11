@@ -2,11 +2,12 @@ package com.scalafi.dynamics.svm
 
 import org.apache.spark.mllib.classification.{SVMModel, SVMWithSGD}
 import org.apache.spark.mllib.linalg.Vector
+import org.apache.spark.mllib.optimization.L1Updater
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.rdd.RDD
 import org.slf4j.LoggerFactory
 
-class SVMOneVersusAllModel(models: Map[Double, SVMModel]) {
+class SVMOneVersusAllModel(val models: Map[Double, SVMModel]) {
   def predict(testData: Vector): Map[Double, Double] = {
     models.mapValues(_.predict(testData))
   }
@@ -30,9 +31,8 @@ class SVMOneVersusAll(svm: SVMWithSGD) {
 
     val models = labels.map { label =>
       log.debug(s"Train model: '$label' versus [${labels.filterNot(_ == label).mkString(", ")}]")
-      relabel(input, label).collect().foreach(println)
       val model = svm.run(relabel(input, label))
-      //model.clearThreshold()
+      model.clearThreshold()
       (label, model)
     }
 
@@ -41,7 +41,7 @@ class SVMOneVersusAll(svm: SVMWithSGD) {
 }
 
 object SVMOneVersusAll {
-  def train(input: RDD[LabeledPoint], numIterations: Int): SVMOneVersusAllModel = {
+  def  train(input: RDD[LabeledPoint], numIterations: Int): SVMOneVersusAllModel = {
     val svmAlg = new SVMWithSGD()
 
     svmAlg.optimizer.

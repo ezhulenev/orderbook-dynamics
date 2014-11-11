@@ -1,43 +1,81 @@
 package com.scalafi.dynamics
 
 import com.scalafi.dynamics.svm.SVMOneVersusAll
+import org.apache.spark.mllib.classification.SVMWithSGD
+import org.apache.spark.mllib.feature.StandardScaler
 import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.mllib.regression.LabeledPoint
+import org.apache.spark.mllib.tree.DecisionTree
+import org.apache.spark.mllib.tree.impurity.Gini
+import org.apache.spark.SparkContext
+import org.apache.spark.mllib.tree.DecisionTree
+import org.apache.spark.mllib.regression.LabeledPoint
+import org.apache.spark.mllib.linalg.Vectors
+import org.apache.spark.mllib.tree.configuration.Algo._
+import org.apache.spark.mllib.tree.impurity.Gini
 
 import scala.util.Random
 
 object SvmTest extends App with ConfiguredSparkContext {
 
-  def labeledPoint(label: Int, center: Int, max: Int, features: Int = 10): LabeledPoint = {
-    val rnd = new Random()
-    def nextFeature() = {
-      val n = rnd.nextInt(max)
-      (center + n).toDouble
-    }
-    val featuresVector = Vectors.sparse(features, for (i <- 0 until features /*filter(_ => rnd.nextBoolean())*/) yield (i, nextFeature()))
+  val rnd = new Random(seed = 123l)
+
+  def labeledPoint(label: Int, mean: Int, deviation: Int, features: Int = 10): LabeledPoint = {
+    def feature = (mean + (if (rnd.nextBoolean()) 1 else -1)*rnd.nextInt(deviation)).toDouble
+    val featuresVector = Vectors.dense((0 until features).map(_ => feature).toArray)
     LabeledPoint(label, featuresVector)
   }
 
+  val nFeatures = 50
+  def label0() = labeledPoint(0, 10, 5, nFeatures)
+  def label1() = labeledPoint(1, 100, 50, nFeatures)
+  def label2() = labeledPoint(2, 1000, 500, nFeatures)
 
-  def assignTo0(point: LabeledPoint): LabeledPoint = point.copy(label = 0)
-  def assignTo1(point: LabeledPoint): LabeledPoint = point.copy(label = 1)
+  val data0 = Seq.fill(1000)(label0())
+  val data1 = Seq.fill(1000)(label1())
+  val data2 = Seq.fill(1000)(label2())
 
-  def label0() = labeledPoint(0, 10, 5, features = 2)
-  def label1() = labeledPoint(1, 20, 5, features = 2)
-  def label2() = labeledPoint(2, 30, 5, features = 2)
+  val rawData = sc.parallelize(data0 ++ data1 ++ data2)
+  /*val scaler = new StandardScaler(true, true).fit(rawData.map(_.features))
+  val scaled = rawData.map(p => p.copy(features = scaler.transform(p.features)))
 
-  val data0 = Seq.fill(50)(label0())
-  val data1 = Seq.fill(50)(label1())
-  val data2 = Seq.fill(50)(label2())
+  val splits =  scaled.randomSplit(Array(0.6, 0.4), seed = 11L)
+  val training = splits(0).cache()
 
-  val input = sc.parallelize(data0 ++ data1 ++ data2)
-
-  val model = SVMOneVersusAll.train(input, 100)
+  val model = SVMOneVersusAll.train(training, 200)
 
 
-  for (i <- 1 to 50) println("Label0 = " + model.predict(label0().features))
-  for (i <- 1 to 50) println("Label1 = " + model.predict(label1().features))
-  for (i <- 1 to 50) println("Label2 = " + model.predict(label2().features))
+  def verifySVM(label: String, gen: => LabeledPoint) = {
+    val predictedMap = model.predict(scaler.transform(gen.features))
+    val predicted = predictedMap.maxBy(_._2)._1
+    println(s"Expected label = $label. Predicted = $predicted. Map = $predictedMap")
+  }
+
+  for (i <- 1 to 5) verifySVM("0", label0())
+  for (i <- 1 to 5) verifySVM("1", label1())
+  for (i <- 1 to 5) verifySVM("2", label2())*/
+
+
+  // Train a DecisionTree model.
+  //  Empty categoricalFeaturesInfo indicates all features are continuous.
+  val numClasses = 3
+  val categoricalFeaturesInfo = Map[Int, Int]()
+  val impurity = "gini"
+  val maxDepth = 5
+  val maxBins = 100
+
+  val dtModel = DecisionTree.trainClassifier(rawData, numClasses, categoricalFeaturesInfo, impurity,
+    maxDepth, maxBins)
+
+  def verifyDecisionTree(label: String, gen: => LabeledPoint) = {
+    val predicted = dtModel.predict(gen.features)
+    println(s"Expected label = $label. Predicted = $predicted")
+  }
+
+  for (i <- 1 to 5) verifyDecisionTree("0", label0())
+  for (i <- 1 to 5) verifyDecisionTree("1", label1())
+  for (i <- 1 to 5) verifyDecisionTree("2", label2())
+  
 
   /*val data = sc.parallelize(Seq.fill(1000)(label0()) ++ Seq.fill(1000)(label1()))
 
