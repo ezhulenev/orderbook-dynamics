@@ -62,6 +62,9 @@ val SparkExclusionRules = Seq(
 
 libraryDependencies ++= Seq(
     "org.slf4j"          % "slf4j-api"       % "1.7.7",
+    "joda-time"          % "joda-time"       % "2.3",
+    "org.joda"           % "joda-convert"    % "1.5",
+    "com.github.scopt"  %% "scopt"           % "3.2.0",
     "ch.qos.logback"     % "logback-classic" % "1.1.2",
     "com.scalafi"       %% "scala-openbook"  % "0.0.5",
     "com.pellucid"      %% "framian"         % "0.3.1",

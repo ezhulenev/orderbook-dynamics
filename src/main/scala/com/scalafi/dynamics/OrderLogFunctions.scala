@@ -24,23 +24,23 @@ class OrderLogFunctions(orderLog: RDD[OpenBookMsg]) extends Serializable {
     orderLog.map(_.symbol).countByValue().toMap
   }
 
-  def extractLabeledData[L: LabelEncode](extractor: LabeledPointsExtractor[L]): Vector[LabeledOrderLog[L]] = {
-    log.debug(s"Extract labeled data from order log")
+  def extractLabeledData[L: LabelEncode](extractor: String => LabeledPointsExtractor[L]): Vector[LabeledOrderLog[L]] = {
+    log.debug(s"Extract labeled data from order log. Order log size: ${orderLog.count()}")
     extractLabeledData(orderLog, extractor)
   }
 
-  def extractLabeledData[L: LabelEncode](symbols: String*)(extractor: LabeledPointsExtractor[L]): Vector[LabeledOrderLog[L]] = {
-    log.debug(s"Extract labeled data from order log for symbols: [${symbols.mkString(", ")}]")
+  def extractLabeledData[L: LabelEncode](symbols: String*)(extractor: String => LabeledPointsExtractor[L]): Vector[LabeledOrderLog[L]] = {
+    log.debug(s"Extract labeled data from order log for symbols: [${symbols.mkString(", ")}]. Order log size: ${orderLog.count()}")
     extractLabeledData(orderLog.filter(order => symbols.contains(order.symbol)), extractor)
   }
 
-  private def extractLabeledData[L: LabelEncode](input: RDD[OpenBookMsg], extractor: LabeledPointsExtractor[L]): Vector[LabeledOrderLog[L]] = {
+  private def extractLabeledData[L: LabelEncode](input: RDD[OpenBookMsg], extractor: String => LabeledPointsExtractor[L]): Vector[LabeledOrderLog[L]] = {
 
     type LabeledData = (String, Vector[LabeledPoint])
 
     val labeledData: RDD[LabeledData] =
       (input.groupBy(_.symbol) map { case (symbol, orders) =>
-        (symbol, extractor.labeledPoints(orders.toVector.sortBy(order => (order.sourceTime, order.sourceTimeMicroSecs))))
+        (symbol, extractor(symbol).labeledPoints(orders.toVector.sortBy(order => (order.sourceTime, order.sourceTimeMicroSecs))))
       }).cache()
 
     val symbols = labeledData.keys.countByValue().keys.toSet

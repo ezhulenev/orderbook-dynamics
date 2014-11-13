@@ -9,6 +9,7 @@ import org.apache.spark.mllib.regression.LabeledPoint
 import org.slf4j.LoggerFactory
 
 import scala.concurrent.duration._
+import scala.util.control.Breaks
 
 object LabeledPointsExtractor {
 
@@ -185,12 +186,39 @@ class LabeledPointsExtractor[L: LabelEncode] private[attribute]
 
       // Create local copies of iterators
       val attributes = self.attributes
-      var labels = self.labels
+      val labels = self.labels
+
+      var labelCursor: Option[LabelCursor] = None
+
+      def expired(attr: AttributesCursor, lbl: LabelCursor): Boolean =
+        lbl.order.sourceTime - attr.order.sourceTime < labelLookForwardMillis
 
       attributes.map { attribute =>
-        labels = labels.dropWhile(_.order.sourceTime - attribute.order.sourceTime < labelLookForwardMillis)
-        if (labels.hasNext) (attribute, Some(labels.next())) else (attribute, None)
+
+        labelCursor match {
+          // Out of label cursors
+          case None if !labels.hasNext =>
+
+          // Try find next label cursor
+          case None if labels.hasNext =>
+            labelCursor = Some(labels.next())
+            while(expired(attribute, labelCursor.get) && labels.hasNext) {
+              labelCursor = Some(labels.next())
+            }
+
+          // Try to find next cursor
+          case Some(_) =>
+            while(expired(attribute, labelCursor.get) && labels.hasNext) {
+              labelCursor = Some(labels.next())
+            }
+        }
+
+        // Check that we really found non-expired cursor
+        labelCursor = labelCursor.filter(!expired(attribute, _))
+
+        (attribute, labelCursor)
       } collect { case (attr, Some(lbl)) => (attr, lbl) }
+
     }
 
     def attributes: Iterator[AttributesCursor] =

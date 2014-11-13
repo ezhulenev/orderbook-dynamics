@@ -20,5 +20,5 @@ trait ConfiguredSparkContext {
       setJars(SparkContext.jarOfClass(this.getClass).toSeq)
   }
 
-  lazy val sc = new SparkContext(sparkConf)
+  implicit lazy val sc = new SparkContext(sparkConf)
 }
