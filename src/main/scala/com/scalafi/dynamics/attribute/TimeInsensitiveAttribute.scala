@@ -15,7 +15,6 @@ sealed trait TimeInsensitiveAttribute[T] extends Serializable { self =>
   def map[T2](f: T => T2): TimeInsensitiveAttribute[T2] = new TimeInsensitiveAttribute[T2] {
     def apply(orderBook: OrderBook): Cell[T2] = self(orderBook).map(f)
   }
-
 }
 
 object TimeInsensitiveSet {
