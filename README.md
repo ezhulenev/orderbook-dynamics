@@ -2,9 +2,7 @@
 
 Based on paper [Modeling high-frequency limit order book dynamics with support vector machines](https://raw.github.com/ezhulenev/scala-openbook/master/assets/Modeling-high-frequency-limit-order-book-dynamics-with-support-vector-machines.pdf)
 
-## Spark Testing Example Application
-
-Source code for blog posts:
+Source code for blog post:
 
 - [Stock Price Prediction With Big Data and Machine Learning](http://eugenezhulenev.com/blog/2014/11/14/stock-price-prediction-with-big-data-and-machine-learning/)
 
