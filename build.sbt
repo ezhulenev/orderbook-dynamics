@@ -66,7 +66,7 @@ libraryDependencies ++= Seq(
     "org.joda"           % "joda-convert"    % "1.5",
     "com.github.scopt"  %% "scopt"           % "3.2.0",
     "ch.qos.logback"     % "logback-classic" % "1.1.2",
-    "com.scalafi"       %% "scala-openbook"  % "0.0.5",
+    "com.scalafi"       %% "scala-openbook"  % "0.0.6",
     "com.pellucid"      %% "framian"         % "0.3.1",
     "org.apache.spark"  %% "spark-core"      % "1.1.0" excludeAll(SparkExclusionRules:_*),
     "org.apache.spark"  %% "spark-mllib"     % "1.1.0" excludeAll(SparkExclusionRules:_*)
