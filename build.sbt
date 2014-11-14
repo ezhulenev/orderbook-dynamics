@@ -1,7 +1,7 @@
 import AssemblyKeys._
 
 
-name := "svm orderbook dynamics"
+name := "orderbook dynamics"
 
 version := "0.0.1"
 
@@ -31,9 +31,9 @@ assemblySettings
 
 // Assembly App
 
-mainClass in assembly := Some("com.scalafi.dynamycs.NotYetImplemented")
+mainClass in assembly := Some("com.scalafi.dynamics.DecisionTreeDynamics")
 
-jarName in assembly := "spark-testing-example-app.jar"
+jarName in assembly := "order-book-dynamics.jar"
 
 mergeStrategy in assembly <<= (mergeStrategy in assembly)(applicationMergeStrategy)
 
