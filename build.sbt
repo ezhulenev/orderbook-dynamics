@@ -13,6 +13,8 @@ scalacOptions += "-deprecation"
 
 scalacOptions += "-feature"
 
+licenses in ThisBuild += ("MIT", url("http://opensource.org/licenses/MIT"))
+
 net.virtualvoid.sbt.graph.Plugin.graphSettings
 
 // Merge strategy
